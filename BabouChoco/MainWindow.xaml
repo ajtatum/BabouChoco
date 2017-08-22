@@ -7,7 +7,9 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <TextBox x:Name="TxtChocoPackages" HorizontalAlignment="Left" Height="191" Margin="41,59,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="419" AcceptsReturn="True"/>
+        <TextBox x:Name="TxtChocoPackages" HorizontalAlignment="Left" Height="136" Margin="54,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="419" AcceptsReturn="True"/>
+        <DataGrid x:Name="DgInstalledChocoPackages" HorizontalAlignment="Left" Height="100" Margin="54,181,0,0" VerticalAlignment="Top" Width="419">
+        </DataGrid>
 
     </Grid>
 </Window>
