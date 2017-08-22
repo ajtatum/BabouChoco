@@ -34,8 +34,6 @@ namespace BabouChoco
 
         public List<string> GetInstalledPackages()
         {
-            //var chocoPackages = new List<string>();
-
             var chocoPackages = new List<ChocoPackage>();
 
             using (var ps = PowerShell.Create())
