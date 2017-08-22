@@ -29,7 +29,7 @@ namespace BabouChoco
         {
             InitializeComponent();
 
-            TxtChocoPackages.Text = string.Join(Environment.NewLine, GetInstalledPackages());
+            GetInstalledPackages();
         }
 
         public List<string> GetInstalledPackages()
