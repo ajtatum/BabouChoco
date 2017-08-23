@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using System.Windows.Shapes;
 using System.Management.Automation;
 using System.Threading;
 using BabouChoco.Models;
+using Newtonsoft.Json;
 
 
 namespace BabouChoco
@@ -25,11 +27,27 @@ namespace BabouChoco
     /// </summary>
     public partial class MainWindow : Window
     {
+        public string ProjectDirectory => Directory.GetParent(Directory.GetCurrentDirectory()).Parent?.FullName;
+        public string ChocoPackagesDirectory => $@"{ProjectDirectory}\Data\ChocoPackages.json";
+
         public MainWindow()
         {
             InitializeComponent();
 
             GetInstalledPackages();
+
+            var chocoPackages = new List<ChocoPackage>
+            {
+                new ChocoPackage("git.install", "Development Tools"),
+                new ChocoPackage("gitextensions", "Development Tools")
+            };
+
+            using (StreamWriter file = File.CreateText(ChocoPackagesDirectory))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                //serialize object directly into file stream
+                serializer.Serialize(file, chocoPackages);
+            }
         }
 
         public List<string> GetInstalledPackages()
@@ -67,9 +85,9 @@ namespace BabouChoco
 
                         var outputArray = outputString.Split(' ');
 
-                        var package = new ChocoPackage()
+                        var package = new ChocoInstalledPackage()
                         {
-                            Name = outputArray[0].Trim(),
+                            Id = outputArray[0].Trim(),
                             InstalledVersion = outputArray[1].Trim()
                         };
 
@@ -85,7 +103,7 @@ namespace BabouChoco
             DgInstalledChocoPackages.AutoGenerateColumns = true;
             DgInstalledChocoPackages.ItemsSource = chocoPackages;
 
-            return chocoPackages.Select(x => x.Name).ToList();
+            return chocoPackages.Select(x => x.Id).ToList();
         }
 
         /// <summary>
