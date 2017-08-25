@@ -1,23 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Configuration;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Management.Automation;
 using System.Threading;
+using BabouChoco.Helpers;
 using BabouChoco.Models;
 using Newtonsoft.Json;
+using Octokit;
 
 
 namespace BabouChoco
@@ -27,8 +20,12 @@ namespace BabouChoco
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string GitHubKey;
+        private string GitHubGistId;
+        private string GitHubGistDesc;
+
         public string ProjectDirectory => Directory.GetParent(Directory.GetCurrentDirectory()).Parent?.FullName;
-        public string ChocoPackagesDirectory => $@"{ProjectDirectory}\Data\ChocoPackages.json";
+        public string GitHubSettingsFile => $@"{ProjectDirectory}\Settings\GitHubSettings.json";
 
         public MainWindow()
         {
@@ -38,16 +35,80 @@ namespace BabouChoco
 
             var chocoPackages = new List<ChocoPackage>
             {
-                new ChocoPackage("git.install", "Development Tools"),
-                new ChocoPackage("gitextensions", "Development Tools")
+                new ChocoPackage("git.install", true),
+                new ChocoPackage("gitextensions", true),
+                new ChocoPackage("greenshot", true),
+                new ChocoPackage("tixati", false)
             };
 
-            using (StreamWriter file = File.CreateText(ChocoPackagesDirectory))
+            var jsonChocoPackages = JsonConvert.SerializeObject(chocoPackages, Formatting.Indented);
+
+            GetGitHubSettings();
+
+            UpdateChocoPackages(jsonChocoPackages);
+        }
+
+        public GitHubClient GetGitHubClient()
+        {
+            var client = new GitHubClient(new ProductHeaderValue("babo-choco-for-you"));
+
+            var tokenAuth = new Credentials(GitHubKey);
+            client.Credentials = tokenAuth;
+
+            return client;
+        }
+
+        public async Task<string> GetChocoPackages()
+        {
+            var client = GetGitHubClient();
+
+            var gist = await client.Gist.Get(GitHubGistId);
+            return gist.Files["packages.json"].Content;
+        }
+
+        public async Task UpdateChocoPackages(string packages)
+        {
+            var client = GetGitHubClient();
+
+            var gistFileUpdate = new GistFileUpdate()
             {
-                JsonSerializer serializer = new JsonSerializer();
-                //serialize object directly into file stream
-                serializer.Serialize(file, chocoPackages);
+                NewFileName = "packages.json",
+                Content = packages
+            };
+
+            var gistUpdate = new GistUpdate()
+            {
+                Description = GitHubGistDesc,
+                Files = {new KeyValuePair<string, GistFileUpdate>("packages.json", gistFileUpdate)}
+            };
+
+            await client.Gist.Edit(GitHubGistId, gistUpdate);
+        }
+
+        public void CreateGitHubSettings(string gitHubKey, string gitHubGistId, string gitHubGistDesc)
+        {
+            var gitHubSettings = new GitHubSettings()
+            {
+                GitHubKey = gitHubKey.ThrowIfNullOrEmpty(nameof(gitHubKey)),
+                GitHubGistId = gitHubGistId.ThrowIfNullOrEmpty(nameof(gitHubGistId)),
+                GitHubGistDesc = gitHubGistDesc.ThrowIfNullOrEmpty(nameof(gitHubGistDesc))
+            };
+
+            using (var file = File.CreateText(GitHubSettingsFile))
+            {
+                var serializer = new JsonSerializer
+                {
+                    Formatting = Formatting.Indented
+                };
+                serializer.Serialize(file, gitHubSettings);
             }
+        }
+
+        public void GetGitHubSettings()
+        {
+            var gitHubSettingsText = File.ReadAllText(GitHubSettingsFile);
+
+            (GitHubKey, GitHubGistId, GitHubGistDesc) = JsonConvert.DeserializeObject<GitHubSettings>(gitHubSettingsText);
         }
 
         public List<string> GetInstalledPackages()

@@ -4,14 +4,14 @@
     {
         public ChocoPackage() { }
 
-        public ChocoPackage(string id, string category)
+        public ChocoPackage(string id, bool sync)
         {
             Id = id;
-            Category = category;
+            Sync = sync;
         }
 
         public string Id { get; set; }
-        public string Category { get; set; }
+        public bool Sync { get; set; }
     }
 
     //public class ChocoCategory
