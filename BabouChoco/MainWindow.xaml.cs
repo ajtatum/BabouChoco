@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Management.Automation;
 using System.Threading;
-using BabouChoco.Helpers;
+using BabouExtensions;
 using BabouChoco.Models;
 using Newtonsoft.Json;
 using Octokit;
@@ -30,7 +29,10 @@ namespace BabouChoco
         public MainWindow()
         {
             InitializeComponent();
+        }
 
+        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        {
             GetInstalledPackages();
 
             var chocoPackages = new List<ChocoPackage>
@@ -45,10 +47,10 @@ namespace BabouChoco
 
             GetGitHubSettings();
 
-            UpdateChocoPackages(jsonChocoPackages);
+            await UpdateChocoPackages(jsonChocoPackages);
         }
 
-        public GitHubClient GetGitHubClient()
+        private GitHubClient GetGitHubClient()
         {
             var client = new GitHubClient(new ProductHeaderValue("babo-choco-for-you"));
 
@@ -58,7 +60,7 @@ namespace BabouChoco
             return client;
         }
 
-        public async Task<string> GetChocoPackages()
+        private async Task<string> GetChocoPackages()
         {
             var client = GetGitHubClient();
 
@@ -66,7 +68,7 @@ namespace BabouChoco
             return gist.Files["packages.json"].Content;
         }
 
-        public async Task UpdateChocoPackages(string packages)
+        private async Task UpdateChocoPackages(string packages)
         {
             var client = GetGitHubClient();
 
@@ -85,7 +87,7 @@ namespace BabouChoco
             await client.Gist.Edit(GitHubGistId, gistUpdate);
         }
 
-        public void CreateGitHubSettings(string gitHubKey, string gitHubGistId, string gitHubGistDesc)
+        private void CreateGitHubSettings(string gitHubKey, string gitHubGistId, string gitHubGistDesc)
         {
             var gitHubSettings = new GitHubSettings()
             {
@@ -104,19 +106,20 @@ namespace BabouChoco
             }
         }
 
-        public void GetGitHubSettings()
+        private void GetGitHubSettings()
         {
             var gitHubSettingsText = File.ReadAllText(GitHubSettingsFile);
 
             (GitHubKey, GitHubGistId, GitHubGistDesc) = JsonConvert.DeserializeObject<GitHubSettings>(gitHubSettingsText);
         }
 
-        public List<string> GetInstalledPackages()
+        private List<string> GetInstalledPackages()
         {
             var chocoPackages = new List<ChocoPackage>();
 
             using (var ps = PowerShell.Create())
             {
+                ps.CreateNestedPowerShell();
                 ps.AddScript("choco list -lo");
 
                 // prepare a new collection to store output stream objects
