@@ -31,23 +31,30 @@ namespace BabouChoco
             InitializeComponent();
         }
 
-        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
             GetInstalledPackages();
+        }
 
-            var chocoPackages = new List<ChocoPackage>
-            {
-                new ChocoPackage("git.install", true),
-                new ChocoPackage("gitextensions", true),
-                new ChocoPackage("greenshot", true),
-                new ChocoPackage("tixati", false)
-            };
+        private async void BtnSyncToGitHub_OnClickAsync(object sender, RoutedEventArgs e)
+        {
+            var chocoPackages = ((List<ChocoInstalledPackage>) DgInstalledChocoPackages.ItemsSource)
+                .Select(x => new ChocoPackage
+                    {
+                        Id = x.Id,
+                        Sync = true
+                    }
+                );
 
             var jsonChocoPackages = JsonConvert.SerializeObject(chocoPackages, Formatting.Indented);
 
             GetGitHubSettings();
 
-            await UpdateChocoPackages(jsonChocoPackages);
+            await UpdateChocoPackages(jsonChocoPackages).ConfigureAwait(false);
+            //foreach (var item in (List<ChocoInstalledPackage>)DgInstalledChocoPackages.ItemsSource)
+            //{
+            //    var chocoInstalledPackage = (ChocoInstalledPackage) item;
+            //}
         }
 
         private GitHubClient GetGitHubClient()
@@ -191,5 +198,7 @@ namespace BabouChoco
             // do something when an error is written to the error stream
             Console.WriteLine(@"An error was written to the Error stream!");
         }
+
+        
     }
 }
