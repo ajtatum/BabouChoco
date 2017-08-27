@@ -37,10 +37,10 @@ namespace BabouChoco
 
             var chocoPackages = new List<ChocoPackage>
             {
-                new ChocoPackage("git.install", true),
-                new ChocoPackage("gitextensions", true),
-                new ChocoPackage("greenshot", true),
-                new ChocoPackage("tixati", false)
+                new ChocoPackage("git.install", new[] {"ALFRED", "CEREBRO"}),
+                new ChocoPackage("gitextensions", new[] {"ALFRED", "CEREBRO"}),
+                new ChocoPackage("greenshot", new[] {"ALL"}),
+                new ChocoPackage("tixati", new[] {"ALFRED"})
             };
 
             var jsonChocoPackages = JsonConvert.SerializeObject(chocoPackages, Formatting.Indented);

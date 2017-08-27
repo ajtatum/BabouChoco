@@ -1,4 +1,7 @@
-﻿namespace BabouChoco.Models
+﻿using System.Collections.Generic;
+using System.Windows.Documents;
+
+namespace BabouChoco.Models
 {
     public class ChocoPackage
     {
@@ -8,10 +11,19 @@
         {
             Id = id;
             Sync = sync;
+            SyncComputerNames = new[] {"ALL"};
+        }
+
+        public ChocoPackage(string id, string[] syncComputerNames)
+        {
+            Id = id;
+            Sync = true;
+            SyncComputerNames = syncComputerNames;
         }
 
         public string Id { get; set; }
         public bool Sync { get; set; }
+        public string[] SyncComputerNames { get; set; }
     }
 
     //public class ChocoCategory
