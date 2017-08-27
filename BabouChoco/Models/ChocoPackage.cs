@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Windows.Documents;
 
 namespace BabouChoco.Models
@@ -14,15 +15,18 @@ namespace BabouChoco.Models
             SyncComputerNames = new[] {"ALL"};
         }
 
-        public ChocoPackage(string id, string[] syncComputerNames)
+        public ChocoPackage(string id, bool sync, string[] syncComputerNames)
         {
             Id = id;
-            Sync = true;
+            Sync = sync;
             SyncComputerNames = syncComputerNames;
         }
 
         public string Id { get; set; }
+        [DisplayName("Installed Version")]
+        public string InstalledVersion { get; set; }
         public bool Sync { get; set; }
+        [DisplayName("Sync With")]
         public string[] SyncComputerNames { get; set; }
     }
 
