@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Management.Automation;
 using System.Threading;
-using System.Windows.Controls;
 using BabouExtensions;
 using BabouChoco.Models;
 using Newtonsoft.Json;
