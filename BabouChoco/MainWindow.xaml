@@ -9,9 +9,9 @@
         Title="MainWindow" Height="350" Width="525"
         Loaded="MainWindow_OnLoaded">
     <Grid>
-        <DataGrid x:Name="DgInstalledChocoPackages" HorizontalAlignment="Left" Height="248" Margin="10,10,0,0" VerticalAlignment="Top" Width="498">
+        <DataGrid x:Name="DgInstalledChocoPackages" HorizontalAlignment="Left" Height="248" Margin="10,10,0,0" VerticalAlignment="Top" Width="498" AutoGenerateColumns="True">
             <DataGrid.DataContext>
-                <Models:ChocoPackage/>
+                <Models:ChocoPackageDisplay/>
             </DataGrid.DataContext>
         </DataGrid>
         <Button x:Name="BtnSyncToGitHub" Content="Sync with GitHub" HorizontalAlignment="Left" Margin="193,277,0,0" VerticalAlignment="Top" Width="106" Click="BtnSyncToGitHub_OnClickAsync"/>

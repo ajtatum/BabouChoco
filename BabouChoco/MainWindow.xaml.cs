@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Management.Automation;
 using System.Threading;
+using System.Windows.Controls;
 using BabouExtensions;
 using BabouChoco.Models;
 using Newtonsoft.Json;
@@ -30,45 +30,28 @@ namespace BabouChoco
         public MainWindow()
         {
             InitializeComponent();
-
-            GetGitHubSettings();
         }
 
-        private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
-            GetInstalledPackages();
+            GetGitHubSettings();
+            await GetInstalledPackages();
         }
 
         private async void BtnSyncToGitHub_OnClickAsync(object sender, RoutedEventArgs e)
         {
-            var chocoPackages = ((List<ChocoInstalledPackage>) DgInstalledChocoPackages.ItemsSource)
+            var chocoPackages = ((List<ChocoPackageDisplay>) DgInstalledChocoPackages.ItemsSource)
                 .Select(x => new ChocoPackage
                     {
                         Id = x.Id,
                         InstalledVersion = x.InstalledVersion,
                         Sync = true,
-                        SyncComputerNames = x.SyncComputerNames
+                        SyncComputerNames = x.SyncComputerNames.Split(',')
                     }
                 );
 
-            chocoPackages.Where(x => !x.SyncComputerNames.Contains(Environment.MachineName))
-                .ForEach(x =>
-                {
-                    var synchComputerNames = new List<string>();
-                    synchComputerNames.AddRange(x.SyncComputerNames);
-                    synchComputerNames.Add(Environment.MachineName);
-                    x.SyncComputerNames = synchComputerNames.ToImmutableHashSet().ToArray();
-                });
-
             var jsonChocoPackages = JsonConvert.SerializeObject(chocoPackages, Formatting.Indented);
 
-            /* TODO:
-             * Before uploading, we should check current file via GetChocoPackages
-             * and compare the lists to make adjustments. For example, add packages
-             * to the list that may have been installed on another computer or
-             * add the computer name to a package that may be installed on multiple
-             * computers.
-            */
             await UpdateChocoPackages(jsonChocoPackages);
         }
 
@@ -134,10 +117,10 @@ namespace BabouChoco
             (_gitHubKey, _gitHubGistId, _gitHubGistDesc) = JsonConvert.DeserializeObject<GitHubSettings>(gitHubSettingsText);
         }
 
-        private List<string> GetInstalledPackages()
+        private async Task<List<string>> GetInstalledPackages()
         {
-            var chocoPackages = new List<ChocoInstalledPackage>();
-            var gitHubGistChocoPackages = GetGitHubGistChocoPackages().Result;
+            var chocoPackages = new List<ChocoPackageDisplay>();
+            var gitHubGistChocoPackages = await GetGitHubGistChocoPackages();
 
             using (var ps = PowerShell.Create())
             {
@@ -172,7 +155,7 @@ namespace BabouChoco
 
                             var outputArray = outputString.Split(' ');
 
-                            var package = new ChocoInstalledPackage()
+                            var package = new ChocoPackageDisplay()
                             {
                                 Id = outputArray[0].Trim(),
                                 InstalledVersion = outputArray[1].Trim()
@@ -195,14 +178,20 @@ namespace BabouChoco
             chocoPackages.ForEach(x =>
             {
                 var gitHubChocoPackage = gitHubGistChocoPackages.FirstOrDefault(y => y.Id == x.Id);
+                var syncComputerNames = new List<string>();
                 if (gitHubChocoPackage != null)
                 {
-                    x.Sync = gitHubChocoPackage.Sync;
-                    x.SyncComputerNames = gitHubChocoPackage.SyncComputerNames;
+                    syncComputerNames.AddRange(gitHubChocoPackage.SyncComputerNames);
+                    if (syncComputerNames.Contains(Environment.MachineName))
+                    {
+                        x.Sync = gitHubChocoPackage.Sync;
+                    }
                 }
+                syncComputerNames.Add(Environment.MachineName);
+
+                x.SyncComputerNames = string.Join(",", syncComputerNames.Distinct());
             });
 
-            DgInstalledChocoPackages.AutoGenerateColumns = true;
             DgInstalledChocoPackages.ItemsSource = chocoPackages;
 
             return chocoPackages.Select(x => x.Id).ToList();
@@ -229,7 +218,5 @@ namespace BabouChoco
             // do something when an error is written to the error stream
             Console.WriteLine(@"An error was written to the Error stream!");
         }
-
-        
     }
 }
