@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Management.Automation;
 using System.Threading;
-using BabouExtensions;
+using BabouChoco.Services;
 using BabouChoco.Models;
 using Newtonsoft.Json;
-using Octokit;
 
 
 namespace BabouChoco
@@ -19,107 +17,41 @@ namespace BabouChoco
     /// </summary>
     public partial class MainWindow : Window
     {
-        private static string _gitHubKey;
-        private static string _gitHubGistId;
-        private static string _gitHubGistDesc;
-
-        public string ProjectDirectory => Directory.GetParent(Directory.GetCurrentDirectory()).Parent?.FullName;
-        public string GitHubSettingsFile => $@"{ProjectDirectory}\Settings\GitHubSettings.json";
+        private readonly IGitHubService gitHubService;
 
         public MainWindow()
         {
             InitializeComponent();
+            gitHubService = new GitHubService();
         }
 
         private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
         {
-            GetGitHubSettings();
+            gitHubService.GetSettings();
             await GetInstalledPackages();
         }
 
         private async void BtnSyncToGitHub_OnClickAsync(object sender, RoutedEventArgs e)
         {
-            var chocoPackages = ((List<ChocoPackageDisplay>) DgInstalledChocoPackages.ItemsSource)
+            var chocoPackages = ((List<ChocoPackageDisplay>)DgInstalledChocoPackages.ItemsSource)
                 .Select(x => new ChocoPackage
-                    {
-                        Id = x.Id,
-                        InstalledVersion = x.InstalledVersion,
-                        Sync = true,
-                        SyncComputerNames = x.SyncComputerNames.Split(',')
-                    }
+                {
+                    Id = x.Id,
+                    InstalledVersion = x.InstalledVersion,
+                    Sync = true,
+                    SyncComputerNames = x.SyncComputerNames.Split(',')
+                }
                 );
 
             var jsonChocoPackages = JsonConvert.SerializeObject(chocoPackages, Formatting.Indented);
 
-            await UpdateChocoPackages(jsonChocoPackages);
-        }
-
-        private GitHubClient GetGitHubClient()
-        {
-            return new GitHubClient(new ProductHeaderValue("babo-choco-for-you"))
-            {
-                Credentials = new Credentials(_gitHubKey)
-            };
-        }
-
-        private async Task<List<ChocoPackage>> GetGitHubGistChocoPackages()
-        {
-            var client = GetGitHubClient();
-
-            var gist = await client.Gist.Get(_gitHubGistId);
-
-            return JsonConvert.DeserializeObject<List<ChocoPackage>>(gist.Files["packages.json"].Content);
-        }
-
-        private async Task UpdateChocoPackages(string packages)
-        {
-            var client = GetGitHubClient();
-
-            var gistFileUpdate = new GistFileUpdate()
-            {
-                NewFileName = "packages.json",
-                Content = packages
-            };
-
-            var gistUpdate = new GistUpdate()
-            {
-                Description = _gitHubGistDesc,
-                Files = {new KeyValuePair<string, GistFileUpdate>("packages.json", gistFileUpdate)}
-            };
-
-            await client.Gist.Edit(_gitHubGistId, gistUpdate);
-        }
-
-        private void CreateGitHubSettings(string gitHubKey, string gitHubGistId, string gitHubGistDesc)
-        {
-            var gitHubSettings = new GitHubSettings()
-            {
-                GitHubKey = gitHubKey.ThrowIfNullOrEmpty(nameof(gitHubKey)),
-                GitHubGistId = gitHubGistId.ThrowIfNullOrEmpty(nameof(gitHubGistId)),
-                GitHubGistDesc = gitHubGistDesc.ThrowIfNullOrEmpty(nameof(gitHubGistDesc))
-            };
-
-            using (var file = File.CreateText(GitHubSettingsFile))
-            {
-                var serializer = new JsonSerializer
-                {
-                    Formatting = Formatting.Indented
-                };
-                serializer.Serialize(file, gitHubSettings);
-            }
-        }
-
-        private void GetGitHubSettings()
-        {
-            var gitHubSettingsText = File.ReadAllText(GitHubSettingsFile);
-
-            (_gitHubKey, _gitHubGistId, _gitHubGistDesc) = JsonConvert.DeserializeObject<GitHubSettings>(gitHubSettingsText);
+            await gitHubService.UpdateGist(jsonChocoPackages);
         }
 
         private async Task<List<string>> GetInstalledPackages()
         {
             var chocoPackages = new List<ChocoPackageDisplay>();
-            var gitHubGistChocoPackages = await GetGitHubGistChocoPackages();
+            var gitHubGistChocoPackages = await gitHubService.GetGist();
 
             using (var ps = PowerShell.Create())
             {
@@ -190,6 +122,8 @@ namespace BabouChoco
 
                 x.SyncComputerNames = string.Join(",", syncComputerNames.Distinct());
             });
+
+
 
             DgInstalledChocoPackages.ItemsSource = chocoPackages;
 
